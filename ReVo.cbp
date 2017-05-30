@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="ReVo" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Debug">
+				<Option output="bin/Debug/ReVo" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="bin/Debug/" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Option use_console_runner="0" />
+				<Compiler>
+					<Add option="-pedantic" />
+					<Add option="-Wextra" />
+					<Add option="-Wall" />
+					<Add option="-std=c++11" />
+					<Add option="-g" />
+					<Add option="-DDEBUG" />
+					<Add directory="include" />
+				</Compiler>
+				<Linker>
+					<Add option="-lsfml-audio-s-d" />
+					<Add option="-lopenal32" />
+					<Add option="-lflac" />
+					<Add option="-lvorbisenc" />
+					<Add option="-lvorbisfile" />
+					<Add option="-lvorbis" />
+					<Add option="-logg" />
+					<Add option="-lsfml-graphics-s-d" />
+					<Add option="-lfreetype" />
+					<Add option="-ljpeg" />
+					<Add option="-lsfml-window-s-d" />
+					<Add option="-lopengl32" />
+					<Add option="-lgdi32" />
+					<Add option="-lsfml-system-s-d" />
+					<Add option="-lwinmm" />
+				</Linker>
+			</Target>
+			<Target title="Release">
+				<Option output="bin/Release/ReVo" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="bin/Release/" />
+				<Option object_output="obj/Release/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Option use_console_runner="0" />
+				<Compiler>
+					<Add option="-O3" />
+					<Add option="-std=c++11" />
+					<Add directory="include" />
+				</Compiler>
+				<Linker>
+					<Add option="-lsfml-audio-s" />
+					<Add option="-lopenal32" />
+					<Add option="-lflac" />
+					<Add option="-lvorbisenc" />
+					<Add option="-lvorbisfile" />
+					<Add option="-lvorbis" />
+					<Add option="-logg" />
+					<Add option="-lsfml-graphics-s" />
+					<Add option="-lfreetype" />
+					<Add option="-ljpeg" />
+					<Add option="-lsfml-window-s" />
+					<Add option="-lopengl32" />
+					<Add option="-lgdi32" />
+					<Add option="-lsfml-system-s" />
+					<Add option="-lwinmm" />
+				</Linker>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-Wall" />
+			<Add option="-std=c++11" />
+			<Add option="-fexceptions" />
+			<Add option="-DSFML_STATIC" />
+			<Add directory="C:/Program Files (x86)/GnuWin32/include" />
+			<Add directory="D:/Adrien/PROG/Libs/SFML-2.4.2/include" />
+			<Add directory="FANN" />
+		</Compiler>
+		<Linker>
+			<Add option="-static" />
+			<Add library="gslcblas" />
+			<Add library="gsl" />
+			<Add library="m" />
+			<Add directory="C:/Program Files (x86)/GnuWin32/lib" />
+			<Add directory="D:/Adrien/PROG/Libs/SFML-2.4.2/lib" />
+		</Linker>
+		<Unit filename="Graph.cpp" />
+		<Unit filename="Graph.h" />
+		<Unit filename="HTTP.cpp" />
+		<Unit filename="HTTP.h" />
+		<Unit filename="MFCCComputer.cpp" />
+		<Unit filename="MFCCComputer.h" />
+		<Unit filename="Recorder.cpp" />
+		<Unit filename="Recorder.h" />
+		<Unit filename="SOM.cpp" />
+		<Unit filename="SOM.h" />
+		<Unit filename="Signal.cpp" />
+		<Unit filename="Signal.h" />
+		<Unit filename="Util.cpp" />
+		<Unit filename="Util.h" />
+		<Unit filename="Vector.cpp" />
+		<Unit filename="Vector.h" />
+		<Unit filename="main.cpp" />
+		<Unit filename="resources.rc">
+			<Option compilerVar="WINDRES" />
+		</Unit>
+		<Extensions>
+			<code_completion />
+			<envvars />
+			<debugger />
+			<lib_finder disable_auto="1" />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>
