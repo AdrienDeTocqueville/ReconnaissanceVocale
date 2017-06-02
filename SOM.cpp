@@ -570,6 +570,11 @@ void Database::saveToFile(string _file)
     }
 }
 
+Vector& Database::operator[](unsigned _index)
+{
+    return db[_index];
+}
+
 void Database::computeCoefs()
 {
     iMaxSteps = 1.0 / (double)maxSteps;

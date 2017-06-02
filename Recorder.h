@@ -2,6 +2,7 @@
 #define RECORDER_H
 
 #include <SFML/Audio.hpp>
+#include "Signal.h"
 
 class Vector;
 class MFCCComputer;
@@ -16,7 +17,8 @@ class Recorder : public sf::SoundRecorder
         virtual void onStop();
 
         void calibrate(double _time);
-        double computeAvailableMFCCs();
+        double getTimeBeforeUpdate();
+        void computeAvailableMFCCs();
 
         double getDuration() const;
 
@@ -26,8 +28,8 @@ class Recorder : public sf::SoundRecorder
         std::vector<Vector> mfccs;
 
         double rate;
-        bool forceUpdate;
         unsigned t;
+        unsigned lastSampleCount;
 };
 
 #endif // RECORDER_H

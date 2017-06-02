@@ -49,6 +49,12 @@ double getNGramProba(vector<string> mots)
     ifstream file("ngram.html");
     string line;
 
+    if (!file)
+    {
+        cout << "Site non accessible" << endl;
+        return 0.0;
+    }
+
     while (getline(file, line))
     {
         if (line.size() < 2)
@@ -74,6 +80,8 @@ double getNGramProba(vector<string> mots)
 
         return proba;
     }
+
+    cout << "Donnéees non accessibles" << endl;
 
     return 0.0;
 }

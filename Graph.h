@@ -23,7 +23,7 @@ class Graph
 
         std::vector<Signal*> signals;
 
-        int w, h;
+        unsigned w, h;
         sf::Vector2i o;
         double xS; // 1 pixel = xS seconde
         double yS; // 1 pixel = yS UA

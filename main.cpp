@@ -1,36 +1,26 @@
+#include "Reconnaissance.h"
 #include "MFCCComputer.h"
-#include "Recorder.h"
 #include "Vector.h"
 #include "Graph.h"
 #include "HTTP.h"
 #include "SOM.h"
 
-#include "floatfann.c"
-
 #define _WIN32_WINNT 0x0502
 #define WINVER 0x0500
 #include <windows.h>
 
-#include <fstream>
-#include <algorithm>
-
-string fileName = "doubleFinal";
+string fileName = "revo";
 
 void traiterArguments(int argc, char* argv[], SOM& som);
 
 void entrainerSOM(SOM& som);
 void classerSOM(SOM& som, const vector<Vector>& _mfccs, string _file);
 
-void classerRNA(SOM& som, string _output, const vector<Vector>& _mfccs, string _file);
-
-void createFANNData(const SOM& _som, string _file = "FANNdata.txt", string _tr = "rna.tr");
-
 int main(int argc, char* argv[])
 {
     SetConsoleTitle("Reconnaissance vocale");
 
-    SOM som;
-    struct fann *ann = NULL;
+    SOM som; som.loadFromFile("revo.som");
 
     MFCCComputer computer(13, 2);
 
@@ -38,11 +28,6 @@ int main(int argc, char* argv[])
 
     if (argc > 1)
         traiterArguments(argc, argv, som);
-    else
-    {
-        som.loadFromFile("revo.som");
-        som.setDatabase("doubleFinal.db");
-    }
 
 	while (1)
 	{
@@ -62,24 +47,12 @@ int main(int argc, char* argv[])
 		cout << "8. Classer SOM" << endl;
 		cout << "9. Tester DB avec le SOM" << endl << endl;
 
-		cout << "10. Reduire le bruit d'un signal" << endl << endl;
+		cout << "10. Reconnaissance vocale" << endl;
+		cout << "11. Reconnaissance de fichier" << endl << endl;
 
-		cout << "11. Reconnaissance vocale" << endl << endl;
+		cout << "12. Tester wordfind" << endl << endl;
 
-        cout << "12. Creer MLP" << endl;
-		cout << "13. Charger MLP" << endl;
-		cout << "14. Entrainer MLP" << endl;
-		cout << "15. Enregistrer MLP" << endl << endl;
 
-		cout << "16. Tester DB avec le MLP" << endl << endl;
-
-		cout << "17. Generer transcription" << endl << endl;
-
-		cout << "18. Modifier transcription" << endl << endl;
-
-		cout << "19. Generer categories SOM" << endl << endl;
-
-		cout << "20. Exporter resultats SOM" << endl << endl;
 
 		cout << endl << "0. Quitter" << endl << endl;
 
@@ -93,7 +66,6 @@ int main(int argc, char* argv[])
 		switch (input)
 		{
             case 0:
-                fann_destroy(ann);
                 return EXIT_SUCCESS;
             break;
 
@@ -204,9 +176,11 @@ int main(int argc, char* argv[])
                     som.setDatabase(removeExtension(fileName) + ".db");
 
 			    classerSOM(som, som.db.db, "Database/" + fileName);
-            break;
 
-			case 9: { /// Tester DB
+                break;
+
+			case 9: /// Tester DB
+            {
                 Signal resultats[] = { Signal(sf::Color::Red), Signal(sf::Color::Green), Signal(sf::Color::Blue) };
 
 
@@ -273,365 +247,66 @@ int main(int argc, char* argv[])
                     GraphWindow.display();
                 }
 
-			} break;
+                 break;
+			}
 
-            case 10: {
-                fileName = askFile(fileName, "Fichier audio", ".wav");
+            case 10:
+            {
+                reconnaissanceVocale(som, computer);
 
-                Signal audio(fileName);
+                Database db; db.loadFromFile("ReVo.db");
 
-                removeNoiseParams(audio);
+                vector<Node> somOutput;
+                vector<vector<Node>> partitions;
 
-                string res = askFile("clean", "Fichier audio", ".wav");
-
-                audio.saveToFile(res);
-            } break;
-
-            case 11: {
-                if (!sf::SoundBufferRecorder::isAvailable())
+			    for (unsigned i(0) ; i < db.size() ; i++)
                 {
-                    std::cout << "Aucun microphone detecte" << std::endl;
-                    system("pause");
-                    break;
+                    Node bmu = som.getBMU(db[i]);
+                    somOutput.push_back(bmu);
                 }
 
+                part(som, partitions, somOutput);
+                for (unsigned i(0) ; i < partitions.size() ; i++)
+                    transcrirePartition(som, partitions[i]);
 
-                // create the recorder
-                Recorder recorder(computer);
+                classerSOM(som, db.db, "Database/ReVo.wav");
 
-                // start the capture
-                recorder.start();
+                break;
+            }
 
-                sf::sleep(sf::seconds(2.0));
-
-
-                sf::RenderWindow GraphWindow(sf::VideoMode(1280, 720), "Enregistrement (espace pour arreter)");
-                Graph g(GraphWindow, 0.00256, 20);
-                g.addSignal(&computer.signal);
-
-
-
-                while (GraphWindow.isOpen())
+            case 11:
+            {
+                if (!som.db.size())
                 {
-                    sf::Event event;
-                    while (GraphWindow.pollEvent(event))
-                    {
-                        if (event.type == sf::Event::Closed)
-                            GraphWindow.close();
+                    cout << "Empty db" << endl;
 
-                        g.update(event);
-                    }
-
-                    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space))
-                        GraphWindow.close();
-
-
-                    recorder.computeAvailableMFCCs();
-                    g.signals[0] = &computer.signal;
-
-
-                    GraphWindow.clear(sf::Color::White);
-
-                    g.draw();
-
-                    GraphWindow.display();
+                    som.setDatabase("doubleFinal.db");
                 }
-
-                // stop the capture
-                std::cout << std::endl << std::endl << "Fin de l'enregistrement" << std::endl;
-                recorder.stop();
-
-
-
-
-                std::ofstream file("output.txt", ios::out | ios::trunc);
-
-                file << som.db.size() << endl;
+                vector<Node> somOutput;
+                vector<vector<Node>> partitions;
 
 			    for (unsigned i(0) ; i < som.db.size() ; i++)
                 {
                     Node bmu = som.getBMU(som.db[i]);
-
-                    unsigned k = 0, phoneme;
-                    while ( (phoneme = som.getPhoneme(bmu.first, bmu.second, k)) != som.labels.size() )
-                    {
-                        if (k)
-                            file << ",";
-
-                        file << phoneme << " " << som.probas[bmu.first][bmu.second][phoneme];
-
-                        k++;
-                    }
-
-                    file << endl;
+                    somOutput.push_back(bmu);
                 }
 
+                cout << "Part: " << somOutput.size() << endl;
+                part(som, partitions, somOutput);
+                cout << "Division: " << partitions.size() << endl << endl;
 
-
-
-                std::cout << std::endl << "Classement" << std::endl;
-                classerSOM(som, recorder.mfccs, "Database/ReVo.wav");
-
-                std::cout << std::endl << "Fini" << std::endl;
-                system("pause");
-
-            } break;
-
-			case 12: {
-			    unsigned hidden = 55;
-			    cout << "Hidden layers: "; cin >> hidden;
-                ann = fann_create_standard(3, 39, hidden, som.couleurs.size());
-
-                system("pause");
-			} break;
-
-			case 13:
-			    fileName = askFile(fileName, "Charger MLP depuis", ".rna");
-                ann = fann_create_from_file(fileName.c_str());
-
-                system("pause");
-			break;
-
-			case 14: /// ENTRAINEMENT
-            {
-                string tr = askFile("rna", "Transcription", ".tr");
-
-                createFANNData(som, "FANNdata.data", tr);
-
-                fann_train_data* train_data = fann_read_train_from_file("FANNdata.data");
-
-                fann_set_training_algorithm(ann, FANN_TRAIN_QUICKPROP);
-
-                fann_init_weights(ann, train_data);
-
-                fann_train_on_data(ann, train_data, 10000, 100, 0.009);
+                for (unsigned i(0) ; i < partitions.size() ; i++)
+                    transcrirePartition(som, partitions[i], true);
 
                 cout << endl;
 
-                cout << fann_test_data(ann, train_data) << endl;
-
                 system("pause");
                 break;
             }
 
-			case 15:
-			    fileName = askFile(fileName, "Enregistrer RNA dans", ".rna");
-                fann_save(ann, fileName.c_str());
-			break;
-
-			case 16:
+            case 12:
             {
-                unsigned maxI = som.db.size()/15;
-
-			    for (unsigned i(0) ; i < maxI ; i++)
-                {
-                    vector<Vector> results(15, Vector(33));
-
-                    for (unsigned j(0) ; j < 15 ; j++)
-                    {
-                        Vector mfcc = som.db[i*15+j];
-
-                        fann_type input[39];
-                        for (unsigned k(0) ; k < 39 ; k++)
-                            input[k] = (fann_type)mfcc[k];
-
-                        fann_type* output = fann_run(ann, input);
-
-                        for (unsigned k(0) ; k < 33 ; k++)
-                            results[j][k] = (double)output[k];
-                    }
-
-                    vector<unsigned> index(15, 0);
-
-                    for (unsigned j(0) ; j < 15 ; j++)
-                    {
-                        for (unsigned k(1) ; k < 33 ; k++)
-                            if (results[j][k] > results[j][index[j]])
-                                index[j] = k;
-
-                        cout << som.labels[index[j]] << '_';
-                    }
-                    cout  << endl;
-
-                    vector<unsigned> index2(15, 0);
-                    for (unsigned j(0) ; j < 15 ; j++)
-                    {
-                        for (unsigned k(1) ; k < 33 ; k++)
-                            if (results[j][k] > results[j][index2[j]] && k != index[j])
-                                index2[j] = k;
-
-                        cout << som.labels[index2[j]] << '_';
-                    }
-                    cout  << endl;
-
-                    vector<unsigned> index3(15, 0);
-                    for (unsigned j(0) ; j < 15 ; j++)
-                    {
-                        for (unsigned k(1) ; k < 33 ; k++)
-                            if (results[j][k] > results[j][index3[j]] && k != index[j] && k != index2[j])
-                                index3[j] = k;
-
-                        cout << som.labels[index3[j]] << '_';
-                    }
-                    cout  << endl;
-
-                    vector<unsigned> index4(15, 0);
-                    for (unsigned j(0) ; j < 15 ; j++)
-                    {
-                        for (unsigned k(1) ; k < 33 ; k++)
-                            if (results[j][k] > results[j][index4[j]] && k != index[j] && k != index2[j] && k != index3[j])
-                                index4[j] = k;
-
-                        cout << som.labels[index4[j]] << '_';
-                    }
-
-                    cout << endl << endl << endl;
-                }
-
-                unsigned input = 0;
-
-                do
-                {
-                    cin >> input;
-
-                    Vector mfcc = som.db[input];
-
-                    fann_type input[39];
-                    for (unsigned k(0) ; k < 39 ; k++)
-                        input[k] = (fann_type)mfcc[k];
-
-                    fann_type* output = fann_run(ann, input);
-
-                    for (unsigned k(0) ; k < 31 ; k++)
-                        cout << output[k] << " ";
-
-                    cout << endl << endl;
-
-                } while (input != 0);
-
-                system("pause");
-
-                break;
-            }
-
-			case 17:
-            {
-                string tr = askFile("transcription", "Transcription", ".tr");
-                std::ofstream file(tr, ios::out | ios::trunc);
-
-                file << som.db.size() << endl;
-
-			    for (unsigned i(0) ; i < som.db.size() ; i++)
-                {
-                    Node bmu = som.getBMU(som.db[i]);
-                    unsigned p = som.getPhoneme(bmu.first, bmu.second, 0);
-
-                    if (p == som.couleurs.size())
-                        file << -1 << endl;
-                    else
-                        file << som.getPhoneme(bmu.first, bmu.second, 0) << endl;
-                }
-                break;
-            }
-
-            case 18:
-            {
-                string tr;
-                cout << "Transcription: "; cin >> tr;   tr = setExtension(tr, ".tr");
-                fileName = askFile(fileName, "Audio file", ".wav");
-
-                classerRNA(som, tr, som.db.db, "Database/" + fileName);
-
-                break;
-            }
-
-            case 19:
-            {
-                vector<int> results;
-
-                string tr = askFile(fileName, "Transcription", ".tr");
-                std::ifstream file(tr);
-                if (!file)
-                {
-                    cout << "Impossible d'ouvrir le fichier" << endl;
-                    system("pause");
-                    break;
-                }
-
-                unsigned _size;
-                file >> _size; results.resize(_size, -1);
-
-                cout << _size << endl;
-
-                vector<vector<vector<unsigned>>> hits(som.w, vector<vector<unsigned>>(som.h, vector<unsigned>(som.couleurs.size(), 0)));
-                vector<vector<unsigned>> hitCount(som.w, vector<unsigned>(som.h, 0));
-
-                cout << "DB: " << som.db.db.size() << endl;
-
-                // Load data
-                for (unsigned i(0) ; i < som.db.db.size() ; i++)
-                {
-                    file >> results[i];
-
-                    if ( results[i] == -1 )
-                        continue;
-
-                    if ( results[i] >= som.couleurs.size() )
-                        continue;
-
-                    Node node = som.getBMU(som.db.db[i]);
-
-                    hits[node.first][node.second][results[i]]++;
-                    hitCount[node.first][node.second]++;
-                }
-
-                cout << "Fichier chargé" << endl << endl;
-
-                // Write to SOM
-                for (unsigned i(0) ; i < som.w ; i++)
-                {
-                    for (unsigned j(0) ; j < som.h ; j++)
-                    {
-                        double scaleFactor = hitCount[i][j]? 1.0 / (double)hitCount[i][j]: 0.0;
-
-                        for (unsigned k(0) ; k < som.couleurs.size() ; k++)
-                            som.probas[i][j][k] = (double)hits[i][j][k] * scaleFactor;
-                    }
-                }
-
-                cout << "Comptage termine" << endl;
-
-                system("pause");
-
-                som.sortProbas();
-
-                break;
-            }
-
-            case 20:
-            {
-                std::ofstream file("output.txt", ios::out | ios::trunc);
-
-                file << som.db.size() << endl;
-
-			    for (unsigned i(0) ; i < som.db.size() ; i++)
-                {
-                    Node bmu = som.getBMU(som.db[i]);
-
-                    unsigned k = 0, phoneme;
-                    while ( (phoneme = som.getPhoneme(bmu.first, bmu.second, k)) != som.labels.size() )
-                    {
-                        if (k)
-                            file << ",";
-
-                        file << phoneme << " " << som.probas[bmu.first][bmu.second][phoneme];
-
-                        k++;
-                    }
-
-                    file << endl;
-                }
-
+                tester_wordfinds();
                 break;
             }
 		}
@@ -892,7 +567,7 @@ void classerSOM(SOM& som, const vector<Vector>& _mfccs, string _file)
 
     // Fenetre 1
     sf::RenderWindow GraphWindow(sf::VideoMode(1280 * ratioX, 720 * ratioY), "Graph");
-    Graph g(GraphWindow, 0.00256, 20);
+    Graph g(GraphWindow, 0.00256, 80);
     g.addSignal(&phrase);
 
     // Fenetre 2
@@ -913,16 +588,16 @@ void classerSOM(SOM& som, const vector<Vector>& _mfccs, string _file)
     unsigned f4w = CouleursWindow.getSize().x;
 
     unsigned f14h = 720*ratioY + iconSize + 2*31;
-    unsigned f234h = 2.0 * som.h*space + iconSize + 3*31;
+    unsigned f24h = som.h*space + iconSize + 2*31;
 
     unsigned f1x = (1920*ratioX-f12w)*0.33, f1y = iconSize+31+ (1080*ratioY-40-f14h)*0.33*2.0;
-    unsigned f4x = (1920*ratioX-f4w)*0.5, f4y = (1080*ratioY-40-f234h)*0.25;
-    unsigned f23x = 2.0*f1x + 1280*ratioX, f2y = 2.0*f4y + 31+iconSize, f3y = 3.0*f4y + 2*31 + iconSize +som.h*space;
+    unsigned f4x = (1920*ratioX-f4w)*0.5, f4y = (1080*ratioY-40-f24h)*0.25;
+    unsigned f23x = 2.0*f1x + 1280*ratioX, f2y = f4y+iconSize+31 + (1080-f24h-f4y-40)*0.5;
 
     GraphWindow.setPosition(sf::Vector2i(f1x, f1y));
-//      SOMWindow.setPosition(sf::Vector2i(f23x, f2y ));
-    ImageWindow.setPosition(sf::Vector2i(f23x, f3y ));
-//    CouleursWindow.setPosition(sf::Vector2i( f4x-8, f4y ));
+      SOMWindow.setPosition(sf::Vector2i(f23x, f2y ));
+    ImageWindow.setPosition(sf::Vector2i(f23x, f2y ));
+    CouleursWindow.setPosition(sf::Vector2i( f4x-8, f4y ));
 
     while (GraphWindow.isOpen() && SOMWindow.isOpen() && ImageWindow.isOpen() && CouleursWindow.isOpen())
     {
@@ -1039,25 +714,31 @@ void classerSOM(SOM& som, const vector<Vector>& _mfccs, string _file)
 
                 if (event.mouseButton.button == sf::Mouse::Left)
                 {
-                    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num1))
-                        som.ordreProbas[mp.x/space][mp.y/space][0] = selected;
+                    unsigned px = mp.x/space, py = mp.y/space;
 
-                    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num2))
+                    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num0))
                     {
-                        if (som.ordreProbas[mp.x/space][mp.y/space].size() == 1)
-                            som.ordreProbas[mp.x/space][mp.y/space].push_back(selected);
-                        else
-                            som.ordreProbas[mp.x/space][mp.y/space][1] = selected;
+                        som.probas[px][py] = Vector(33, 0);
+                        som.probas[px][py][selected] = 1.0;
                     }
 
-                    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num3))
+                    sf::Keyboard::Key touches[] = {sf::Keyboard::Num1, sf::Keyboard::Num2, sf::Keyboard::Num3};
+                    for (unsigned i(0) ; i < 3 ; i++)
                     {
-                        if (som.ordreProbas[mp.x/space][mp.y/space].size() == 2)
-                            som.ordreProbas[mp.x/space][mp.y/space].push_back(selected);
-                        else
-                            som.ordreProbas[mp.x/space][mp.y/space][2] = selected;
+                        if (sf::Keyboard::isKeyPressed(touches[i]) && i < som.ordreProbas[px][py].size())
+                        {
+                            double prev = som.probas[px][py][selected];
+                            som.probas[px][py][selected] = som.probas[px][py][som.ordreProbas[px][py][i]];
+                            som.probas[px][py][som.ordreProbas[px][py][i]] = prev;
+                        }
                     }
                 }
+            }
+
+            else if (event.type == sf::Event::KeyReleased)
+            {
+                if (event.key.code == sf::Keyboard::R)
+                    som.sortProbas();
             }
         }
 
@@ -1073,7 +754,19 @@ void classerSOM(SOM& som, const vector<Vector>& _mfccs, string _file)
                     continue;
 
                 rect.setPosition(i*space, j*space);
+                text.setPosition(i*space+1, j*space);
 
+                /// Affichage du plus probable
+//                unsigned index = som.ordreProbas[i][j][0];
+//
+//                rect.setFillColor(som.couleurs[index]);
+//                text.setString(som.labels[index]);
+//
+//
+//                ImageWindow.draw(rect);
+//                ImageWindow.draw(text);
+
+                /// Affichage des 3 plus probables
                 for (unsigned k(0) ; k < 3 ; k++)
                 {
                     if (k >= som.ordreProbas[i][j].size())
@@ -1157,341 +850,4 @@ void classerSOM(SOM& som, const vector<Vector>& _mfccs, string _file)
     // Restore la console
     ShowWindow(GetConsoleWindow(), SW_RESTORE);
     SetFocus(GetConsoleWindow());
-}
-
-void classerRNA(SOM& som, string _output, const vector<Vector>& _mfccs, string _file)
-{
-    if (!_mfccs.size())
-    {
-        cout << "   /!\\ Aucun MFCC /!\\" << endl << endl;
-        system("pause");
-        return;
-    }
-
-    auto vm = sf::VideoMode::getDesktopMode();
-    double ratioX = vm.width/1920.0;
-    double ratioY = vm.height/1080.0;
-
-    unsigned squareSize = 21 * ratioX, space = squareSize+1;
-    unsigned iconSize = 50 * ratioX;
-    unsigned selected = 0;
-
-    /// Chargements
-        sf::SoundBuffer buf;
-        if (!buf.loadFromFile(_file))
-        {
-            cout << "Fichier introuvable: " << _file << endl;
-            system("pause");
-
-            return;
-        }
-
-        Signal phrase(buf, sf::Color::Red);
-
-        sf::RectangleShape rect(sf::Vector2f(1, 1));
-
-        sf::Sound soundFile;
-        sf::Int16 samples[Nlength];
-
-        sf::Font font;
-        if (!font.loadFromFile("C:/Windows/Fonts/arial.ttf"))
-        {
-            cout << "Echec lors du chargement de la police" << endl;
-            system("pause");
-            return;
-        }
-
-        sf::Text text;
-        text.setFont(font);
-        text.setCharacterSize(15 * ratioX);
-        text.setFillColor(sf::Color::Black);
-
-        bool moved = true;
-        unsigned m = 0;
-
-    // Fenetre 1
-    sf::RenderWindow GraphWindow(sf::VideoMode(1280 * ratioX, 720 * ratioY), "Graph");
-    Graph g(GraphWindow, 0.00256, 20);
-    g.addSignal(&phrase);
-
-    // Fenetre 3
-    sf::RenderWindow ImageWindow(sf::VideoMode(som.w*space, som.h*space), "Image");
-
-    // Fenetre 4
-    sf::RenderWindow CouleursWindow(sf::VideoMode(som.couleurs.size()*iconSize, iconSize), "Selecteur couleur");
-
-    // Cacher la console
-    ShowWindow(GetConsoleWindow(), SW_MINIMIZE);
-
-
-    //31: hauteur barre de titre, 40: hauteur barre des taches
-    unsigned f12w = 1280*ratioX + som.w*space;
-    unsigned f4w = CouleursWindow.getSize().x;
-
-    unsigned f14h = 720*ratioY + iconSize + 2*31;
-    unsigned f234h = 2.0 * som.h*space + iconSize + 3*31;
-
-    unsigned f1x = (1920*ratioX-f12w)*0.33, f1y = iconSize+31+ (1080*ratioY-40-f14h)*0.33*2.0;
-    unsigned f4x = (1920*ratioX-f4w)*0.5, f4y = (1080*ratioY-40-f234h)*0.25;
-    unsigned f23x = 2.0*f1x + 1280*ratioX, f3y = 3.0*f4y + 2*31 + iconSize +som.h*space;
-
-    GraphWindow.setPosition(sf::Vector2i(f1x, f1y));
-    ImageWindow.setPosition(sf::Vector2i(f23x, f3y ));
-    CouleursWindow.setPosition(sf::Vector2i( f4x-8, f4y ));
-
-
-    vector<int> results(_mfccs.size(), -1);
-
-    std::ifstream file(_output.c_str());
-
-    unsigned _size;
-    file >> _size;
-
-    if (_size > results.size())
-        results.resize(_size, -1);
-
-    for (unsigned i(0) ; i < _size ; i++)
-    {
-        file >> results[i];
-    }
-
-    file.close();
-
-    while (GraphWindow.isOpen() && CouleursWindow.isOpen())
-    {
-        sf::Event event;
-
-        /// PREMIERE FENETRE    -   Graph
-        while (GraphWindow.pollEvent(event))
-        {
-            if (event.type == sf::Event::Closed)
-                GraphWindow.close();
-
-            double lastp = g.selected;
-            g.update(event);
-            if (lastp != g.selected)
-                moved = true;
-        }
-
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::A))
-        {
-            if (moved)
-            {
-                unsigned first = g.selected * 16000;
-
-				if (first >= phrase.data.size())
-				{
-					for (unsigned i(0) ; i < Nlength ; i++)
-						samples[i] = 0;
-				}
-				else
-				{
-                    unsigned c = min(Nlength, phrase.data.size() - first);
-
-					for (unsigned i(0) ; i < c ; i++)
-						samples[i] = phrase.data[first + i];
-					for (unsigned i(c) ; i < Nlength ; i++)
-						samples[i] = 0;
-				}
-
-                soundFile.stop();
-
-                buf.loadFromSamples(samples, Nlength, 1, 16000);
-                soundFile.setBuffer(buf);
-                soundFile.setLoop(true);
-
-                soundFile.play();
-
-                moved = false;
-            }
-
-            soundFile.setLoop(true);
-
-            if (soundFile.getStatus() == sf::SoundSource::Status::Stopped)
-                soundFile.play();
-        }
-        else if (soundFile.getStatus() == sf::SoundSource::Status::Playing)
-            soundFile.setLoop(false);
-
-
-        GraphWindow.clear(sf::Color::White);
-
-        g.draw();
-
-        GraphWindow.display();
-
-        m = round(100.0*g.selected);
-
-        if (m >= _mfccs.size())
-            m = _mfccs.size()-1;
-
-        /// DEUXIEME FENETRE   -   Resultat
-        text.setCharacterSize(50*ratioX);
-
-        while (ImageWindow.pollEvent(event))
-        {
-            if (event.type == sf::Event::Closed)
-                ImageWindow.close();
-        }
-
-        // Clear screen
-        ImageWindow.clear(sf::Color::White);
-
-        text.setPosition(5, 5);
-        if (results[m] != -1)
-            text.setString(toString(m) + ":  " + som.labels[results[m]]);
-        else
-            text.setString(toString(m) + ":  _");
-
-        ImageWindow.draw(text);
-        ImageWindow.display();
-
-        /// QUATRIEME FENETRE   -   Couleurs
-        rect.setScale(iconSize, iconSize);
-        text.setCharacterSize(15*ratioX);
-
-        while (CouleursWindow.pollEvent(event))
-        {
-            if (event.type == sf::Event::Closed)
-                CouleursWindow.close();
-
-            if (event.type == sf::Event::MouseButtonPressed)
-            {
-                selected = sf::Mouse::getPosition(CouleursWindow).x / iconSize;
-
-                // Clear screen
-                CouleursWindow.clear();
-
-                // Display palette
-                for (unsigned i(0) ; i < som.couleurs.size() ; i++)
-                {
-                    rect.setFillColor( som.couleurs[i] );
-                    rect.setPosition(i*iconSize, 0);
-
-                    text.setString( som.labels[i] + '\n' + toString(i) );
-                    text.setPosition(i*iconSize+3, 10);
-
-                    if (i == selected)
-                        rect.setFillColor( sf::Color::Black );
-
-                    CouleursWindow.draw(rect);
-                    CouleursWindow.draw(text);
-                }
-
-                rect.setScale(iconSize-6, iconSize-6);
-                rect.setFillColor( som.couleurs[selected] );
-                rect.setPosition(selected*iconSize+3, 3);
-
-                text.setString( som.labels[selected] );
-                text.setPosition(selected*iconSize+5, 10);
-
-                CouleursWindow.draw(rect);
-                CouleursWindow.draw(text);
-
-                // Update the window
-                CouleursWindow.display();
-            }
-        }
-
-
-
-
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::E))
-        {
-            results[m] = selected;
-        }
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Z) && results[m] != -1)
-        {
-            selected = results[m];
-        }
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::R))
-        {
-            results[m] = -1;
-        }
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::P))
-        {
-            std::ofstream file2(_output.c_str(), ios::out | ios::trunc);
-
-            file2 << results.size();
-
-            for (unsigned i(0) ; i < results.size() ; i++)
-            {
-                file2 << endl << results[i];
-            }
-        }
-    }
-
-    GraphWindow.close();
-    CouleursWindow.close();
-
-    // Restore la console
-    ShowWindow(GetConsoleWindow(), SW_RESTORE);
-    SetFocus(GetConsoleWindow());
-
-    std::ofstream file2(_output.c_str(), ios::out | ios::trunc);
-
-    file2 << results.size();
-
-    for (unsigned i(0) ; i < results.size() ; i++)
-    {
-        file2 << endl << results[i];
-    }
-}
-
-void createFANNData(const SOM& _som, string _file, string _tr)
-{
-    unsigned number = 0;
-    vector<int> results;
-
-    std::ifstream input(_tr);
-
-    if (!input)
-    {
-        cout << "File not found: " << _tr << endl;
-        return;
-    }
-
-    unsigned _size;
-    input >> _size; results.resize(_size);
-
-    for (unsigned i(0) ; i < _size ; i++)
-    {
-        input >> results[i];
-        if (results[i] != -1)
-            number ++;
-    }
-
-    input.close();
-
-
-    std::ofstream file(_file.c_str(), ios::out | ios::trunc);
-
-    file << number << " " << 39 <<  " " << _som.couleurs.size();
-
-    for (unsigned i(0) ; i < results.size() ; i++)
-    {
-        if (results[i] == -1)
-            continue;
-
-        // print MFCC
-        Vector mfcc = _som.db.db[i];
-
-        file << '\n' << mfcc[0];
-        for (unsigned k(1) ; k < 39 ; k++)
-            file << " " << mfcc[k];
-
-        // print phoneme
-        file << '\n';
-        for (int k(0) ; k < (int)_som.couleurs.size() ; k++)
-        {
-            if (k == results[i])
-                file << 1;
-            else
-                file << 0;
-
-            if (k != (int)_som.couleurs.size()-1)
-                file << " ";
-        }
-    }
-
 }

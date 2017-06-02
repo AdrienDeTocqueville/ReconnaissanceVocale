@@ -25,6 +25,7 @@ class Signal
         Signal(std::string _audioSource, sf::Color _color = sf::Color::Black);
         Signal(sf::SoundBuffer _buf, sf::Color _color = sf::Color::Black);
         Signal(const std::vector<double>& _data, unsigned _sampleRate, sf::Color _color = sf::Color::Black);
+        Signal(double* _data, unsigned _dataSize, unsigned _sampleRate, sf::Color _color = sf::Color::Black);
 
         ~Signal();
 

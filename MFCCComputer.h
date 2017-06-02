@@ -32,11 +32,11 @@ class MFCCComputer
 
         void setCoefs(unsigned _coefCount, unsigned _deltaCount);
 
-        void setSignal(const std::vector<double>& _data, unsigned _sampleRate, bool _denoise);
+        void setSignal(double* _data, unsigned _dataSize, unsigned _sampleRate, bool _denoise);
         void setSignal(std::string _file, bool _denoise);
 
 
-        void computeMFCCs(std::vector<Vector>& _result);
+        void computeMFCCs(::vector<Vector>& _result);
         void computeMFCC(Vector& _result, unsigned _frame);
 
 //    private:

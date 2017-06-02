@@ -21,8 +21,8 @@ bool Recorder::onStart()
 
     samples.reserve(10000);
 
-    forceUpdate = false;
     t = 1;
+    lastSampleCount = 0;
 
     return true;
 }
@@ -30,18 +30,14 @@ bool Recorder::onStart()
 void Recorder::onStop()
 {
     if (!samples.empty())
-    {
-        forceUpdate = true;
         computeAvailableMFCCs();
-    }
 
-    Signal signal = Signal(samples, rate, sf::Color::Red);
 
-    if (rate != 16000)
-        signal.resample(16000);
+    computer.setSignal(samples.data(), samples.size(), rate, false);
+    computer.signal.saveToFile("Database/ReVo.wav");
 
-    signal.saveToFile("Database/ReVo.wav");
-    Database db;    db.db = mfccs;
+    Database db;
+    computer.computeMFCCs(db.db);
     db.saveToFile("ReVo.db");
 
     std::cout << "Duree: " << getDuration() << std::endl;
@@ -75,24 +71,31 @@ void Recorder::calibrate(double _time)
     samples.clear();
 }
 
-double Recorder::computeAvailableMFCCs()
+double Recorder::getTimeBeforeUpdate()
 {
-    if (!forceUpdate)
-    {
-        double left = 5.0 * t - getDuration();
-        if (left > 0.0)
-            return left;
+    double left = 5.0 * t - getDuration();
+    if (left > 0.0)
+        return left;
 
-        t++;
-    }
-
-    computer.setSignal(samples, rate, false);
-
-    computer.computeMFCCs(mfccs);
-
-    std::cout << mfccs.size() << "   " << getDuration() << std::endl;
+    t++;
 
     return 0.0;
+}
+
+void Recorder::computeAvailableMFCCs()
+{
+    computer.setSignal(samples.data() + lastSampleCount, samples.size() - lastSampleCount, rate, false);
+    lastSampleCount = samples.size();
+
+    std::vector<Vector> newMFCCs;
+    computer.computeMFCCs(newMFCCs);
+    computer.computeMFCCs(mfccs);
+
+    mfccs.reserve(mfccs.size()+ newMFCCs.size());
+    for (unsigned i(0) ; i < newMFCCs.size(); i++)
+        mfccs.push_back(newMFCCs[i]);
+
+    std::cout << mfccs.size() << "   " << getDuration() << std::endl;
 }
 
 double Recorder::getDuration() const

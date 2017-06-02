@@ -17,7 +17,7 @@ struct Database
     bool loadFromFile(string _file);
     void saveToFile(string _file);
 
-    Vector& operator[](unsigned _index) { return db[_index]; }
+    Vector& operator[](unsigned _index);
     void computeCoefs();
 
     unsigned size();
@@ -62,8 +62,8 @@ class SOM
             Node getBMU(Vector _input) const;
             Vector run(Vector _input) const;
 
-            vector<vector<double>> getUMatrix4(bool _verbose = false) const; // Blanc = similarité
-            vector<vector<double>> getUMatrix8(bool _verbose = false) const; // Blanc = similarité
+            vector<vector<double>> getUMatrix4(bool _verbose = false) const; // Blanc = similaritÃ©
+            vector<vector<double>> getUMatrix8(bool _verbose = false) const; // Blanc = similaritÃ©
 
             Vector& getWeight(Node _n);
             unsigned getIndex(Node _n) const;

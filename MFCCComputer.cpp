@@ -92,9 +92,9 @@ void MFCCComputer::setCoefs(unsigned _coefCount, unsigned _deltaCount)
     deltaCount = _deltaCount;
 }
 
-void MFCCComputer::setSignal(const std::vector<double>& _data, unsigned _sampleRate, bool _denoise)
+void MFCCComputer::setSignal(double* _data, unsigned _dataSize, unsigned _sampleRate, bool _denoise)
 {
-    signal = Signal(_data, _sampleRate, sf::Color::Red);
+    signal = Signal(_data, _dataSize, _sampleRate, sf::Color::Red);
 
     if (_sampleRate != 16000)
         signal.resample(16000);

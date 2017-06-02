@@ -35,10 +35,14 @@ Signal::Signal(sf::SoundBuffer _buf, sf::Color _color):
 }
 
 Signal::Signal(const std::vector<double>& _data, unsigned _sampleRate, sf::Color _color):
-    Signal(_color, _sampleRate)
-{
-    data = _data;
-}
+    data(_data),
+    color(_color), sampleRate(_sampleRate)
+{ }
+
+Signal::Signal(double* _data, unsigned _dataSize, unsigned _sampleRate, sf::Color _color):
+    data(_data, _data + _dataSize),
+    color(_color), sampleRate(_sampleRate)
+{}
 
 Signal::~Signal()
 { }

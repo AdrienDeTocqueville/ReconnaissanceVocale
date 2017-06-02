@@ -78,7 +78,6 @@
 			<Add option="-DSFML_STATIC" />
 			<Add directory="C:/Program Files (x86)/GnuWin32/include" />
 			<Add directory="D:/Adrien/PROG/Libs/SFML-2.4.2/include" />
-			<Add directory="FANN" />
 		</Compiler>
 		<Linker>
 			<Add option="-static" />
@@ -94,6 +93,10 @@
 		<Unit filename="HTTP.h" />
 		<Unit filename="MFCCComputer.cpp" />
 		<Unit filename="MFCCComputer.h" />
+		<Unit filename="Reconnaissance.cpp" />
+		<Unit filename="Reconnaissance.h" />
+		<Unit filename="Reconstitution.cpp" />
+		<Unit filename="Reconstitution.h" />
 		<Unit filename="Recorder.cpp" />
 		<Unit filename="Recorder.h" />
 		<Unit filename="SOM.cpp" />
@@ -104,6 +107,8 @@
 		<Unit filename="Util.h" />
 		<Unit filename="Vector.cpp" />
 		<Unit filename="Vector.h" />
+		<Unit filename="Viterbi.cpp" />
+		<Unit filename="Viterbi.h" />
 		<Unit filename="main.cpp" />
 		<Unit filename="resources.rc">
 			<Option compilerVar="WINDRES" />
